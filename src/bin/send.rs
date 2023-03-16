@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use serialport::{SerialPortType, UsbPortInfo};
 
 fn main() {
