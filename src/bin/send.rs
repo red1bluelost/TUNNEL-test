@@ -1,14 +1,16 @@
 use serialport::{SerialPortType, UsbPortInfo};
 
 fn main() {
+    let tunnel_device = "TUNNEL_Leader";
     let path = serialport::available_ports()
         .expect("No ports found!")
         .into_iter()
-        .find(|p| match &p.port_type {
+        .find(|p| match dbg!(&p.port_type) {
             SerialPortType::UsbPort(UsbPortInfo {
-                serial_number: Some(s),
+                serial_number: Some(sn),
+                product: Some(p),
                 ..
-            }) => s == "deadbeef",
+            }) => sn == "deadbeef" && p == tunnel_device,
             _ => false,
         })
         .unwrap()
