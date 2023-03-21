@@ -1,11 +1,15 @@
 use serialport::{SerialPortType, UsbPortInfo};
+use std::{
+    io::{ErrorKind, Read},
+    time::Duration,
+};
 
 fn main() {
     let tunnel_device = "TUNNEL_Follower";
     let path = serialport::available_ports()
         .expect("No ports found!")
         .into_iter()
-        .find(|p| match &p.port_type {
+        .find(|p| match &dbg!(p).port_type {
             SerialPortType::UsbPort(UsbPortInfo {
                 serial_number: Some(sn),
                 product: Some(p),
@@ -16,17 +20,21 @@ fn main() {
         .unwrap()
         .port_name;
 
-    let mut port = serialport::new(path, 115200).open().unwrap();
+    let mut port = serialport::new(path, 115200)
+        .timeout(Duration::from_secs(1))
+        .open()
+        .unwrap();
 
     loop {
-        if port.bytes_to_read().unwrap() == 0 {
-            continue;
-        }
-        let mut buf = String::new();
-        match port.read_to_string(&mut buf) {
-            Ok(0) => {}
-            Ok(count) => println!("read {}: {}", count, buf),
-            Err(e) => panic!("{}", e),
+        let mut buf = [0; 255];
+        match port.read(&mut buf) {
+            Ok(count) => println!("read {}: {}", count, unsafe {
+                core::str::from_utf8_unchecked(&buf)
+            }),
+            Err(e) => match e.kind() {
+                ErrorKind::TimedOut => {}
+                _ => panic!("{}\n", e),
+            },
         }
     }
 }
