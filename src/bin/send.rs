@@ -1,22 +1,7 @@
-use serialport::{SerialPortType, UsbPortInfo};
-
 fn main() {
-    let tunnel_device = "TUNNEL_Leader";
-    let path = serialport::available_ports()
-        .expect("No ports found!")
-        .into_iter()
-        .find(|p| match &dbg!(p).port_type {
-            SerialPortType::UsbPort(UsbPortInfo {
-                serial_number: Some(sn),
-                product: Some(p),
-                ..
-            }) => sn == "deadbeef" && p == tunnel_device,
-            _ => false,
-        })
-        .unwrap()
-        .port_name;
-
-    let mut port = serialport::new(path, 115200).open().unwrap();
+    let mut port = tunnel_test::get_port_builder("TUNNEL_Leader")
+        .open()
+        .unwrap();
 
     for line in std::io::stdin().lines() {
         let line = line.unwrap();
