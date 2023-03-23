@@ -29,7 +29,7 @@ fn main() {
         let mut buf = [0; 255];
         match port.read(&mut buf) {
             Ok(count) => println!("read {}: {}", count, unsafe {
-                core::str::from_utf8_unchecked(&buf)
+                core::str::from_utf8_unchecked(&buf[..count])
             }),
             Err(e) => match e.kind() {
                 ErrorKind::TimedOut => {}
