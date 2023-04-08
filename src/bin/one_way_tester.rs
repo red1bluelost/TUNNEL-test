@@ -19,6 +19,8 @@ fn main() -> io::Result<()> {
         .open()
         .unwrap();
 
+    tunnel_test::flush_receiver(receiver_port.as_mut());
+
     let mut cnt: u64 = 0;
     loop {
         match back_and_forth_test(sender_port.as_mut(), receiver_port.as_mut())
@@ -50,18 +52,26 @@ fn back_and_forth_test(
     }
 
     let mut cnt = 0;
+    let mut buf_idx = 0;
+    let mut buf = vec![0; 255];
     let read = loop {
-        let mut buf = vec![0; 255];
         receiver_port.write("f".as_bytes()).unwrap();
-        match receiver_port.read(&mut buf) {
+        match receiver_port.read(&mut buf[buf_idx..]) {
+            Ok(count) if count == 64 => {
+                buf_idx += count;
+                continue;
+            }
             Ok(count) => {
-                if count != buf_size {
+                if count > 64 {
+                    println!("BIG COUNT: {}", count);
+                }
+                if buf_idx + count != buf_size {
                     return Err(format!(
                         "length mismatch on read: buf is {}, read is {}",
                         buf_size, count
                     ));
                 }
-                buf.truncate(count);
+                buf.truncate(buf_size);
                 break buf;
             }
             Err(e) => match e.kind() {
@@ -85,16 +95,17 @@ fn back_and_forth_test(
 
 fn rand_buf() -> Vec<u8> {
     let mut rng = rand::thread_rng();
-    let size = rng.gen_range(1..50);
-    // let size = rng.gen_range(31..=32);
-    let size = if matches!(size, 31 | 32 | 64) {
-        size + 2
-    } else {
-        size
-    };
-    assert_ne!(size, 31);
-    assert_ne!(size, 32);
-    assert_ne!(size, 64);
+    let size = 32;
+    // let size = rng.gen_range(1..200);
+    // let size = rng.gen_range(32..=32);
+    // let size = if matches!(size, 31 | 32 | 64) {
+    //     size + 2
+    // } else {
+    //     size
+    // };
+    // assert_ne!(size, 31);
+    // assert_ne!(size, 32);
+    // assert_ne!(size, 64);
     let mut buf = Vec::with_capacity(size);
     for _ in 0..size {
         buf.push(rng.gen());

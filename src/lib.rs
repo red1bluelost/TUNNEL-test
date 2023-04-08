@@ -1,4 +1,5 @@
-use serialport::{SerialPortBuilder, SerialPortType, UsbPortInfo};
+use serialport::{SerialPort, SerialPortBuilder, SerialPortType, UsbPortInfo};
+use std::io::ErrorKind;
 
 pub fn get_port_builder(device_name: &str) -> SerialPortBuilder {
     let path = serialport::available_ports()
@@ -16,4 +17,24 @@ pub fn get_port_builder(device_name: &str) -> SerialPortBuilder {
         .port_name;
 
     serialport::new(path, 57600)
+}
+
+pub fn flush_receiver(receiver_port: &mut dyn SerialPort) {
+    let mut cnt = 0;
+    loop {
+        let mut buf = vec![0; 255];
+        receiver_port.write("f".as_bytes()).unwrap();
+        match receiver_port.read(&mut buf) {
+            Ok(_) => {}
+            Err(e) => match e.kind() {
+                ErrorKind::TimedOut => {
+                    if cnt >= 10 {
+                        return;
+                    }
+                    cnt += 1;
+                }
+                _ => panic!("{}", e),
+            },
+        }
+    }
 }
